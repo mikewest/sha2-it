@@ -1,57 +1,97 @@
-<style>
-  body, html { background: #EEE; }
-  section {
-    background: #FFF;
-    margin: 1em;
-    padding: 1em;
-    border-radius: 1em;
-  }
-  section strong {
-    display: block;
-  }
-  #input {
-    width: 700px;
-    height: 200px;
-  }
-</style>
-<section>
-  <strong>Message</strong>
-  <textarea id="input">Hello, world.</textarea>
-</section>
-<section>
-  <strong>Digests</strong>
-  <pre id="output"></pre>
-</section>
-<script>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SHA2 digest generator</title>
+    <style>
+      body, html {
+        height: 100%;
+        font-family: sans-serif;
+        background: #EEE;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      main {
+        flex: 1;
+      }
+        section {
+          background: #FFF;
+          margin: 1em;
+          padding: 1em;
+          border-radius: 1em;
+        }
+          section strong {
+            display: block;
+          }
+          #input {
+            width: 100%;
+            height: 200px;
+            box-sizing: border-box;
+            white-space: nowrap;
+          }
+          #output {
+            width: 100%;
+            overflow-x: auto;
+          }
+      footer {
+        background: #111;
+        color: #EEE;
+        margin: 0;
+        padding: 1ch 2ch;
+        text-align: right;
+      }
+        footer a {
+          font-family: monospace;
+          color: #5CF;
+        }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <strong>Message</strong>
+        <textarea id="input">Hello, world.</textarea>
+      </section>
+      <section>
+        <strong>Digests</strong>
+        <pre id="output"></pre>
+      </section>
+    </main>
+    <footer>
+      Bugs? Poke at <a href="https://github.com/mikewest/sha2-it/">mikewest/sha2-it</a> on GitHub.
+    </footer>
+    <script>
+      function bufferToBase64(buffer) {
+        // It'd be nice if https://tc39.es/proposal-arraybuffer-base64/spec/
+        // was widely available... `new Uint8Array(buffer).toBase64()` would
+        // be lovely.
+        const binaryString = Array.from(new Uint8Array(buffer), (byte) =>
+          String.fromCodePoint(byte),
+        ).join("");
+        return btoa(binaryString);
+      }
 
-  function bufferToBase64(buffer) {
-    var binary = '';
-    var bytes = new Uint8Array(buffer);
-    var len = bytes.byteLength;
-    for (var i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return window.btoa( binary );
-  }
+      function updateHashes() {
+        const textarea = document.getElementById('input');
+        const encoder = new TextEncoder();
+        const data = encoder.encode(textarea.value);
+        Promise.all([
+          crypto.subtle.digest("SHA-256", data),
+          crypto.subtle.digest("SHA-384", data),
+          crypto.subtle.digest("SHA-512", data),
+        ]).then(digests => {
+          let result = {
+            "sha-256": bufferToBase64(digests[0]),
+            "sha-384": bufferToBase64(digests[1]),
+            "sha-512": bufferToBase64(digests[2]),
+          };
+          document.querySelector('#output').innerText =
+            JSON.stringify(result, null, "  ");
+        });
+      }
 
-  function updateHashes() {
-    const textarea = document.getElementById('input');
-    const encoder = new TextEncoder();
-    const data = encoder.encode(textarea.value);
-    Promise.all([
-      crypto.subtle.digest("SHA-256", data),
-      crypto.subtle.digest("SHA-384", data),
-      crypto.subtle.digest("SHA-512", data),
-    ]).then(digests => {
-      let result = {
-        "sha-256": bufferToBase64(digests[0]),
-        "sha-384": bufferToBase64(digests[1]),
-        "sha-512": bufferToBase64(digests[2]),
-      };
-      document.querySelector('#output').innerText = JSON.stringify(result, null, "  ");
-    });
-  }
-
-  document.getElementById('input').addEventListener('input', updateHashes);
-  updateHashes();
-</script>
+      document.getElementById('input').addEventListener('input', updateHashes);
+      updateHashes();
+    </script>
+  </body>
+</html>
