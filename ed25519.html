@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ed25519 it.</title>
+    <style>
+      body, html {
+        height: 100%;
+        font-family: sans-serif;
+        background: #EEE;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      main {
+        flex: 1;
+      }
+        section {
+          background: #FFF;
+          margin: 1em;
+          padding: 1em;
+          border-radius: 1em;
+        }
+          section strong {
+            display: block;
+          }
+          textarea {
+            width: 100%;
+            height: 200px;
+            box-sizing: border-box;
+            white-space: nowrap;
+          }
+          #output {
+            width: 100%;
+            overflow-x: auto;
+          }
+      footer {
+        background: #111;
+        color: #EEE;
+        margin: 0;
+        padding: 1ch 2ch;
+        text-align: right;
+      }
+        footer a {
+          font-family: monospace;
+          color: #5CF;
+        }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <strong>Message</strong>
+        <textarea id="input">"identity-digest": sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=:
+"@signature-params": ("identity-digest";sf);alg="ed25519";keyid="JrQLj5P/89iXES9+vFgrIy29clF9CC/oPPsw3c5D0bs=";tag="sri"</textarea>
+      </section>
+      <section>
+        <strong>Key</strong>
+        <textarea id="key">{
+  "NOTE": "Sourced from https://www.rfc-editor.org/rfc/rfc9421.html#appendix-B.1.4",
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "kid": "test-key-ed25519",
+  "d": "n4Ni-HpISpVObnQMW0wOhCKROaIKqKtW_2ZYb2p9KcU",
+  "x": "JrQLj5P_89iXES9-vFgrIy29clF9CC_oPPsw3c5D0bs"
+}</textarea>
+        <button id="generate">Generate a random key.</button>
+      </section>
+      <section>
+        <strong>Signature</strong>
+        <pre id="sig-output"></pre>
+        <button id="sign">Sign <var>message</var> with <var>key</var>.</button>
+      </section>
+    </main>
+    <script>
+      function bufferToBase64(buffer) {
+        // It'd be nice if https://tc39.es/proposal-arraybuffer-base64/spec/
+        // was widely available... `new Uint8Array(buffer).toBase64()` would
+        // be lovely.
+        const binaryString = Array.from(new Uint8Array(buffer), (byte) =>
+          String.fromCodePoint(byte),
+        ).join("");
+        return btoa(binaryString);
+      }
+
+      async function sign() {
+        const message = new TextEncoder().encode(document.getElementById('input').value);
+        const jwk = JSON.parse(document.getElementById('key').value);
+        const key = await crypto.subtle.importKey("jwk", jwk, { name: "Ed25519" }, true, [ "sign" ]);
+        const sig = await crypto.subtle.sign({name: "Ed25519"}, key, message);
+        document.getElementById("sig-output").textContent = bufferToBase64(sig);
+      }
+      document.getElementById('sign').onclick = sign;
+
+      async function generate() {
+        const key = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
+        const jwk = await crypto.subtle.exportKey("jwk", key.privateKey);
+        document.getElementById("key").textContent = JSON.stringify(jwk, null, 2);
+      }
+      document.getElementById('generate').onclick = generate;
+    </script>
+  </body>
+</html>
